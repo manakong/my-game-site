@@ -5,6 +5,8 @@ let playerNumber = '';
 let opponentNumber = '';
 let guessCount = 0;
 let history = [];
+let drawCanvas = null;
+let ctx = null;
 
 // 获取元素
 const pages = document.querySelectorAll('.page');
@@ -19,23 +21,55 @@ const digitSelect = document.getElementById('digitSelect');
 const confirmDigit = document.getElementById('confirmDigit');
 const digitGrid = document.getElementById('digitGrid');
 const keypad = document.getElementById('keypad');
-const deleteButton = document.getElementById('deleteButton');
-const clearButton = document.getElementById('clearButton');
 const confirmNumber = document.getElementById('confirmNumber');
 const guessButton = document.getElementById('guessButton');
 const historyTable = document.getElementById('historyTable').querySelector('tbody');
-const drawCanvas = document.getElementById('drawCanvas');
-const ctx = drawCanvas.getContext('2d');
 const paintColor = document.getElementById('paintColor');
 const paintSize = document.getElementById('paintSize');
+
+// 初始化画布
+function initCanvas() {
+    drawCanvas = document.getElementById('drawCanvas');
+    ctx = drawCanvas.getContext('2d');
+    drawCanvas.addEventListener('mousedown', startDrawing);
+    drawCanvas.addEventListener('mousemove', draw);
+    drawCanvas.addEventListener('mouseup', stopDrawing);
+    drawCanvas.addEventListener('mouseleave', stopDrawing);
+}
+
+let isDrawing = false;
+let lastX = 0;
+let lastY = 0;
+
+function startDrawing(e) {
+    isDrawing = true;
+    [lastX, lastY] = [e.offsetX, e.offsetY];
+}
+
+function draw(e) {
+    if (!isDrawing) return;
+    const x = e.offsetX;
+    const y = e.offsetY;
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(x, y);
+    ctx.strokeStyle = paintColor.value;
+    ctx.lineWidth = paintSize.value;
+    ctx.stroke();
+    [lastX, lastY] = [x, y];
+}
+
+function stopDrawing() {
+    isDrawing = false;
+}
 
 // 显示页面
 function showPage(pageNumber) {
     pages.forEach((page, index) => {
         if (index + 1 === pageNumber) {
-            page.style.display = 'block';
+            page.classList.remove('hidden');
         } else {
-            page.style.display = 'none';
+            page.classList.add('hidden');
         }
     });
     currentPage = pageNumber;
@@ -60,7 +94,7 @@ startButton.addEventListener('click', () => {
             const userDiv = document.createElement('div');
             userDiv.textContent = `用户${i}`;
             userDiv.addEventListener('click', () => {
-                readyPopup.style.display = 'block';
+                readyPopup.style.display = 'flex';
             });
             onlineUsers.appendChild(userDiv);
         }
@@ -89,11 +123,13 @@ confirmDigit.addEventListener('click', () => {
     digitCount = parseInt(digitSelect.value);
     showPage(4);
     // 生成数字格子
+    digitGrid.innerHTML = '';
     for (let i = 0; i < digitCount; i++) {
         const digitDiv = document.createElement('div');
         digitGrid.appendChild(digitDiv);
     }
     // 生成数字键盘
+    keypad.innerHTML = '';
     const numbers = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '0'];
     numbers.forEach(num => {
         const button = document.createElement('button');
@@ -142,7 +178,7 @@ keypad.addEventListener('click', (event) => {
 // 确认数字按钮点击事件
 confirmNumber.addEventListener('click', () => {
     if (playerNumber.length === digitCount) {
-        confirmPopup.style.display = 'block';
+        confirmPopup.style.display = 'flex';
     }
 });
 
@@ -150,12 +186,15 @@ confirmNumber.addEventListener('click', () => {
 document.getElementById('confirmYes').addEventListener('click', () => {
     confirmPopup.style.display = 'none';
     showPage(5);
+    // 初始化画布
+    initCanvas();
     // 模拟对方数字
     opponentNumber = '';
     for (let i = 0; i < digitCount; i++) {
         opponentNumber += Math.floor(Math.random() * 10);
     }
     const opponentNumberGrid = document.getElementById('opponentNumberGrid');
+    opponentNumberGrid.innerHTML = '';
     for (let i = 0; i < digitCount; i++) {
         const digitDiv = document.createElement('div');
         digitDiv.textContent = '●';
@@ -191,7 +230,7 @@ guessButton.addEventListener('click', () => {
         row.appendChild(hitsCell);
         historyTable.appendChild(row);
         if (hits === digitCount) {
-            winPopup.style.display = 'block';
+            winPopup.style.display = 'flex';
             document.getElementById('guessCount').textContent = guessCount;
             const opponentNumberGrid = document.getElementById('opponentNumberGrid');
             opponentNumberGrid.childNodes.forEach((node, index) => {
@@ -215,4 +254,12 @@ document.getElementById('restartButton').addEventListener('click', () => {
     guessCount = 0;
     history = [];
     digitGrid.innerHTML = '';
-    document.getElementById('
+    keypad.innerHTML = '';
+    historyTable.innerHTML = '';
+    ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+});
+
+document.getElementById('backButton').addEventListener('click', () => {
+    winPopup.style.display = 'none';
+    showPage(1);
+});
